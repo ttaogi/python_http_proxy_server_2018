@@ -1,3 +1,7 @@
+#original url : https://null-byte.wonderhowto.com/how-to/sploit-make-proxy-server-python-0161232/
+#maybe original code is for python2.
+#I modified a little code for python3.
+
 import socket, sys
 #from thread import *
 from threading import *
