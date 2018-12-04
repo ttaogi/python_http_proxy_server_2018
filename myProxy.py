@@ -7,72 +7,94 @@ import socket, sys
 from threading import *
 
 listening_port = 4000
-max_conn = 5
+max_conn = 100
 buffer_size = 4096
+timeout = 10
 
 ##########
 ##########
 ##########
 
 def start():
+    #start_count = 0
+
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        print(":::initialize socket.")
+        ###
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        print(":::start - initialize socket.")
     except Exception as e:
-        print(":::initialize error.")
+        print(":::start - initialize error.")
         print(e)
         sys.exit(1)
 
     try:
         sa = socket.getaddrinfo("127.0.0.1", 4000, socket.AF_INET, socket.SOCK_STREAM)[0]
         print(sa)
-        #s.bind(('', listening_port))
-        #s.bind((socket.gethostname, listening_port))
         s.bind(sa[4])
-        print(":::bind socket.")
+        print(":::start - bind socket.")
     except Exception as e:
-        print(":::bind error.")
+        print(":::start - bind error.")
         print(e)
         sys.exit(1)
 
     try:
         s.listen(max_conn)
-        print(":::start server.")
+        print(":::start - listen.")
     except Exception as e:
-        print(":::listen error.")
-        print(":::listening port num : %d."%(listening_port))
+        print(":::start - listen error.")
+        print(":::start - listening port num : %d."%(listening_port))
         print(e)
         sys.exit(1)
 
     while 1:
         try:
+            #print(start_count)
+            #start_count += 1
             conn, addr = s.accept()
             data = conn.recv(buffer_size)
-            #start_new_thread(conn_string, (conn, data, addr))
             new_thread = Thread(target=conn_string, args=(conn, data, addr))
             new_thread.start()
         except KeyboardInterrupt as e:
-            s.close()
-            print(":::Terminate proxy server.")
+            if s:
+                s.close()
+            print(":::start - terminate proxy server.")
             sys.exit(1)
 
     s.close()
 
 def conn_string(conn, data, addr):
-    print(":::call conn_string")
+    print(":::conn_string")
+    str_data = ''
+    first_line = ''
+    url = ''
+    http_pos = -1
+    temp = ''
+    port_pos = -1
+    webserver_pos = -1
     webserver = ''
     port = 80
 
     try:
         str_data = data.decode('utf-8')
         first_line = str_data.split('\n')[0]
-        print("first line:")
-        print(first_line)
+        #print("!!!!!!")
+        #print("conn_string - first line:")
+        #print(first_line)
         url = first_line.split(' ')[1]
-        print("url:")
-        print(url)
+        #print("@@@@@@")
+        #print("conn_string - url:")
+        #print(url)
         http_pos = url.find("://")
+        #print("######")
+        #print("conn_string - msg:")
+        #print(str_data)
+    except Exception as e:
+        print(":::conn_string - error-1")
+        print(e)
+        return
 
+    try:
         if(http_pos == -1):
             temp = url
         else:
@@ -85,48 +107,45 @@ def conn_string(conn, data, addr):
 
         webserver = ""
         port = -1
+    except Exception as e:
+        print(":::conn_string - error-2")
+        print(e)
+        return
 
+    try:
         if(port_pos == -1 or webserver_pos < port_pos):
             port = 80
             webserver = temp[:webserver_pos]
         else:
             port = int((temp[(port_pos+1):])[:webserver_pos - port_pos-1])
             webserver = temp[:port_pos]
-        print("port:")
-        print(port)
-        print("webserver:")
-        print(webserver)
+        #print("conn_string - port:")
+        #print(port)
+        #print("conn_string - webserver:")
+        #print(webserver)
     except Exception as e:
-        print(":::conn_string error-1")
+        print(":::conn_string - error-3")
         print(e)
         return
 
     try:
         proxy_server(webserver, port, conn, data, addr)
     except Exception as e:
-        print(":::conn_string error-2")
+        print(":::conn_string error-4")
         print(e)
         pass
 
 def proxy_server(webserver, port, conn, data, addr):
-    print(":::call proxy_server")
+    print(":::proxy_server")
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        print("&&&&")
+        ###
+        s.settimeout(timeout)
         s.connect((webserver, port))
-        print("****")
-        print("data type:")
-        print(type(data))
-        print("data:")
-        print(data)
         s.send(data)
 
-        print("%%%%")
         while 1:
             reply = s.recv(buffer_size)
-
-            print(":::proxy_sever reply:")
-            print(reply)
 
             if(len(reply) > 0):
                 conn.send(reply)
@@ -138,14 +157,16 @@ def proxy_server(webserver, port, conn, data, addr):
             else:
                 break
 
-        print(":::proxy_server end")
+        print(":::proxy_server - end")
         s.close()
         conn.close()
     except Exception as e:
-        print(":::proxy_server error")
+        print(":::proxy_server - error")
         print(e)
-        s.close()
-        conn.close()
+        if s:
+            s.close()
+        if conn:
+            conn.close()
         sys.exit(1)
         
 ##########
