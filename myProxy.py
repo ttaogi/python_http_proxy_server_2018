@@ -29,7 +29,7 @@ def start():
         sys.exit(1)
 
     try:
-        sa = socket.getaddrinfo("127.0.0.1", 4000, socket.AF_INET, socket.SOCK_STREAM)[0]
+        sa = socket.getaddrinfo("127.0.0.1", listening_port, socket.AF_INET, socket.SOCK_STREAM)[0]
         print(sa)
         s.bind(sa[4])
         print(":::start - bind socket.")
@@ -96,7 +96,7 @@ def conn_string(conn, data, addr):
 
     try:
         if(http_pos == -1):
-            temp = url
+                temp = url
         else:
             temp = url[(http_pos+3):]
 
