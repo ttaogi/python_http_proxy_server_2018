@@ -5,6 +5,10 @@
 import socket, sys
 #from thread import *
 from threading import *
+import re
+import ssl
+import subprocess
+import socketserver
 
 listening_port = 4000
 max_conn = 100
@@ -31,6 +35,8 @@ def start():
     try:
         sa = socket.getaddrinfo("127.0.0.1", listening_port, socket.AF_INET, socket.SOCK_STREAM)[0]
         print(sa)
+        print("sa[4] type", type(sa[4]), sa[4])
+        print("sa[4][0] type", type(sa[4][0]), sa[4][0])
         s.bind(sa[4])
         print(":::start - bind socket.")
     except Exception as e:
@@ -128,12 +134,20 @@ def conn_string(conn, data, addr):
         print(e)
         return
 
-    try:
-        proxy_server(webserver, port, conn, data, addr)
-    except Exception as e:
-        print(":::conn_string error-4")
-        print(e)
-        pass
+    if(port == 443):
+        try:
+            proxy_server_HTTPS(webserver, port, conn, data, addr)
+        except Exception as e:
+            print(":::conn_string error-4")
+            print(e)
+            pass
+    else:
+        try:
+            proxy_server(webserver, port, conn, data, addr)
+        except Exception as e:
+            print(":::conn_string error-5")
+            print(e)
+            pass
 
 def proxy_server(webserver, port, conn, data, addr):
     print(":::proxy_server")
@@ -169,6 +183,56 @@ def proxy_server(webserver, port, conn, data, addr):
             conn.close()
         sys.exit(1)
         
+def proxy_server_HTTPS(webserver, port, conn, data, addr):
+    print(":::proxy_server_HTTPS")
+    try:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        context.verify_mode = ssl.CERT_NONE
+        context.check_hostname = False
+        print("check point 1", addr, ":", webserver, ":", port)
+        s = context.wrap_socket(socket.socket(socket.AF_INET), server_hostname=addr)
+        s.settimeout(timeout)
+
+        web2addr = ""
+        looks = subprocess.check_output(["nslookup", webserver])
+        print("looks 1", looks.decode('utf-8'))
+        looks = looks.decode('utf-8').split("\n")
+        #print("looks 2", looks)
+        for look in looks:
+            match = re.match("^address:[ ]+([^ ]+).*$", look.strip(), re.I)
+            if(match):
+                web2addr = match.group(1)
+
+        print("check point 2", webserver, ":", web2addr, type(web2addr))
+        s.connect((web2addr, port))
+        print("check point 3")
+        s.sendall(data)
+        print("check point 4")
+
+        resp = ""
+        while 1:
+            reply = s.recv(buffer_size)
+            
+            if(len(reply) > 0):
+                conn.send(reply)
+                dar = float(len(reply))
+                dar = float(dar/1024)
+                dar = "%.3s"%(str(dar))
+                dar = "%s KB"%(dar)
+                print(":::Request done : %s = %s."%(str(addr[0]), str(dar)))
+            else:
+                break
+        print(":::proxy_server_HTTPS end")
+        s.close()
+        conn.close()
+    except Exception as e:
+        print(":::proxy_server_HTTPS -error")
+        print(e)
+        if s:
+            s.close()
+        if conn:
+            conn.close()
+        sys.exit(1)
 ##########
 ##########
 ##########
