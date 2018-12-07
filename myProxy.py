@@ -157,10 +157,11 @@ def proxy_server(webserver, port, conn, data, addr):
         s.settimeout(timeout)
         s.connect((webserver, port))
         s.send(data)
+        print("msg : ", data.decode('utf-8'))
 
         while 1:
             reply = s.recv(buffer_size)
-
+            print("reply : ", reply)
             if(len(reply) > 0):
                 conn.send(reply)
                 dar = float(len(reply))
@@ -193,7 +194,7 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
 
         web2addr = ""
         looks = subprocess.check_output(["nslookup", webserver])
-        print("looks 1", looks.decode('utf-8'))
+        print("dns\n", looks.decode('utf-8'))
         looks = looks.decode('utf-8').split("\n")
         #print("looks 2", looks)
         for look in looks:
@@ -205,19 +206,17 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
         print("IP : ", web2addr, " type : ", type(web2addr))
 
         s = context.wrap_socket(socket.socket(socket.AF_INET))#, server_hostname=(webserver, port))
-        #print("check point 3")
         s.settimeout(timeout)
-
         s.connect((web2addr, port))
-        #print("check point 4")
+
         s.send(data)
-        print("check point 5")
-        print("msg : ", data.decode('utf-8'))
+        print("check point 3")
+        print("msg\n", data.decode('utf-8'))
 
         resp = ""
         while 1:
             reply = s.recv(buffer_size)
-            print("reply : ", reply.decode('utf-8'))
+            print("reply : ", reply)
             if(len(reply) > 0):
                 conn.send(reply)
                 dar = float(len(reply))
