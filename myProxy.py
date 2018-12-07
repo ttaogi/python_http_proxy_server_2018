@@ -1,6 +1,7 @@
 #original url : https://null-byte.wonderhowto.com/how-to/sploit-make-proxy-server-python-0161232/
 #maybe original code is for python2.
 #I modified a little code for python3.
+#+ https://fossjon.wordpress.com/2016/05/16/basic-https-tls-proxy-server-in-python/
 
 import socket, sys
 #from thread import *
