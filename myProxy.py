@@ -20,11 +20,8 @@ timeout = 10
 ##########
 
 def start():
-    #start_count = 0
-
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ###
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         print(":::start - initialize socket.")
     except Exception as e:
@@ -55,8 +52,6 @@ def start():
 
     while 1:
         try:
-            #print(start_count)
-            #start_count += 1
             conn, addr = s.accept()
             data = conn.recv(buffer_size)
             new_thread = Thread(target=conn_string, args=(conn, data, addr))
@@ -84,17 +79,8 @@ def conn_string(conn, data, addr):
     try:
         str_data = data.decode('utf-8')
         first_line = str_data.split('\n')[0]
-        #print("!!!!!!")
-        #print("conn_string - first line:")
-        #print(first_line)
         url = first_line.split(' ')[1]
-        #print("@@@@@@")
-        #print("conn_string - url:")
-        #print(url)
         http_pos = url.find("://")
-        #print("######")
-        #print("conn_string - msg:")
-        #print(str_data)
     except Exception as e:
         print(":::conn_string - error-1")
         print(e)
@@ -125,10 +111,6 @@ def conn_string(conn, data, addr):
         else:
             port = int((temp[(port_pos+1):])[:webserver_pos - port_pos-1])
             webserver = temp[:port_pos]
-        #print("conn_string - port:")
-        #print(port)
-        #print("conn_string - webserver:")
-        #print(webserver)
     except Exception as e:
         print(":::conn_string - error-3")
         print(e)
