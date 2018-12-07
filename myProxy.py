@@ -189,9 +189,7 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
         context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         context.verify_mode = ssl.CERT_NONE
         context.check_hostname = False
-        print("check point 1", addr, ":", webserver, ":", port)
-        s = context.wrap_socket(socket.socket(socket.AF_INET), server_hostname=addr)
-        s.settimeout(timeout)
+        print("check point 1", "addr : ", addr, ":", webserver, ":", port)
 
         web2addr = ""
         looks = subprocess.check_output(["nslookup", webserver])
@@ -203,16 +201,23 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
             if(match):
                 web2addr = match.group(1)
 
-        print("check point 2", webserver, ":", web2addr, type(web2addr))
+        print("check point 2", "webserver : ", webserver)
+        print("IP : ", web2addr, " type : ", type(web2addr))
+
+        s = context.wrap_socket(socket.socket(socket.AF_INET))#, server_hostname=(webserver, port))
+        #print("check point 3")
+        s.settimeout(timeout)
+
         s.connect((web2addr, port))
-        print("check point 3")
-        s.sendall(data)
-        print("check point 4")
+        #print("check point 4")
+        s.send(data)
+        print("check point 5")
+        print("msg : ", data.decode('utf-8'))
 
         resp = ""
         while 1:
             reply = s.recv(buffer_size)
-            
+            print("reply : ", reply.decode('utf-8'))
             if(len(reply) > 0):
                 conn.send(reply)
                 dar = float(len(reply))
