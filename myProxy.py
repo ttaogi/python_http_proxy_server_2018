@@ -4,7 +4,6 @@
 #+ https://fossjon.wordpress.com/2016/05/16/basic-https-tls-proxy-server-in-python/
 
 import socket, sys
-#from thread import *
 from threading import *
 import re
 import ssl
@@ -14,11 +13,9 @@ import socketserver
 listening_port = 11000
 max_conn = 1000
 buffer_size = 8192
-timeout = 60
+timeout = 20
 
-##########
-##########
-##########
+
 
 def start():
     try:
@@ -81,7 +78,7 @@ def start():
                     conn.close()
                 print(e)
                 continue
-        except KeyboardInterrupt as e:
+        except Exception as e:
             if s:
                 s.close()
             print(":::start - terminate proxy server.")
@@ -91,7 +88,6 @@ def start():
     s.close()
 
 def conn_string(conn, data, addr):
-    #print(":::conn_string")
     str_data = ''
     first_line = ''
     url = ''
@@ -166,27 +162,17 @@ def proxy_server(webserver, port, conn, data, addr):
     print(":::proxy_server")
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ###
         s.settimeout(timeout)
-        #print("webserver : " , webserver, " port : ", port)
         s.connect((webserver, port))
         s.send(data)
-        #print("msg : ", data)
 
         while 1:
             reply = s.recv(buffer_size)
-            #print("reply : ", reply)
             if(len(reply) > 0):
                 conn.send(reply)
-                #dar = float(len(reply))
-                #dar = float(dar/1024)
-                #dar = "%.3s"%(str(dar))
-                #dar = "%s KB"%(dar)
-                #print(":::Request done : %s = %s."%(str(addr[0]), str(dar)))
             else:
                 break
 
-        #print(":::proxy_server - end")
         s.close()
         conn.close()
     except Exception as e:
@@ -205,11 +191,9 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
         context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         context.verify_mode = ssl.CERT_NONE
         context.check_hostname = False
-        #print("check point 1", "addr : ", addr, ":", webserver, ":", port)
 
         web2addr = ""
         looks = subprocess.check_output(["nslookup", webserver])
-        #print("dns\n", looks.decode('euc-kr'))
         looks = looks.decode('euc-kr').split("\n")
         
         for look in looks:
@@ -227,15 +211,11 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
             if(match):
                 addresses_flag = True
 
-        #print("check point 2", "webserver : ", webserver)
-        #print("IP : ", web2addr, " type : ", type(web2addr))
-
-        s = context.wrap_socket(socket.socket(socket.AF_INET))#, server_hostname=(webserver, port))
+        s = context.wrap_socket(socket.socket(socket.AF_INET))
         s.settimeout(timeout)
         s.connect((web2addr, port))
 
         s.send(data)
-        #print("check point 3")
         print("msg\n", data.decode('utf-8'), "\n")
 
         resp = ""
@@ -244,14 +224,9 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
             print("reply : ", reply, "\n")
             if(len(reply) > 0):
                 conn.send(reply)
-                #dar = float(len(reply))
-                #dar = float(dar/1024)
-                #dar = "%.3s"%(str(dar))
-                #dar = "%s KB"%(dar)
-                #print(":::Request done : %s = %s."%(str(addr[0]), str(dar)))
             else:
                 break
-        print(":::proxy_server_HTTPS end")
+
         s.close()
         conn.close()
     except Exception as e:
@@ -262,9 +237,8 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
         if conn:
             conn.close()
         sys.exit(1)
-##########
-##########
-##########
+
+
 
 try:
     listening_port = int(input(":::Enter listening port number : "))
@@ -273,5 +247,6 @@ except KeyboardInterrupt:
     sys.exit()
 
 start()
+
 
 
