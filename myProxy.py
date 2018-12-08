@@ -11,10 +11,10 @@ import ssl
 import subprocess
 import socketserver
 
-listening_port = 4000
-max_conn = 100
-buffer_size = 4096
-timeout = 10
+listening_port = 11000
+max_conn = 1000
+buffer_size = 8192
+timeout = 60
 
 ##########
 ##########
@@ -47,26 +47,51 @@ def start():
         print(":::start - listen.")
     except Exception as e:
         print(":::start - listen error.")
-        print(":::start - listening port num : %d."%(listening_port))
         print(e)
         sys.exit(1)
 
     while 1:
         try:
-            conn, addr = s.accept()
-            data = conn.recv(buffer_size)
-            new_thread = Thread(target=conn_string, args=(conn, data, addr))
-            new_thread.start()
+            try:
+                conn, addr = s.accept()
+            except Exception as e:
+                if conn:
+                    conn.close()
+                print(e)
+                continue
+            
+            try:
+                data = conn.recv(buffer_size)
+            except Exception as e:
+                if conn:
+                    conn.close()
+                print(e)
+                continue
+            
+            if not data:
+                if conn:
+                    conn.close()
+                continue
+
+            try:
+                new_thread = Thread(target=conn_string, args=(conn, data, addr), daemon=True)
+                new_thread.start()
+            except Exception as e:
+                if conn:
+                    conn.close()
+                print(e)
+                continue
         except KeyboardInterrupt as e:
             if s:
                 s.close()
             print(":::start - terminate proxy server.")
             sys.exit(1)
 
+    print(":::start - exit.")
     s.close()
 
 def conn_string(conn, data, addr):
-    print(":::conn_string")
+    #print(":::conn_string")
     str_data = ''
     first_line = ''
     url = ''
@@ -76,6 +101,11 @@ def conn_string(conn, data, addr):
     webserver_pos = -1
     webserver = ''
     port = 80
+
+    if not data:
+        print(":::conn_string - error-0")
+        conn.close()
+        return
 
     try:
         str_data = data.decode('utf-8')
@@ -138,24 +168,25 @@ def proxy_server(webserver, port, conn, data, addr):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ###
         s.settimeout(timeout)
+        #print("webserver : " , webserver, " port : ", port)
         s.connect((webserver, port))
         s.send(data)
-        print("msg : ", data.decode('utf-8'))
+        #print("msg : ", data)
 
         while 1:
             reply = s.recv(buffer_size)
-            print("reply : ", reply)
+            #print("reply : ", reply)
             if(len(reply) > 0):
                 conn.send(reply)
-                dar = float(len(reply))
-                dar = float(dar/1024)
-                dar = "%.3s"%(str(dar))
-                dar = "%s KB"%(dar)
-                print(":::Request done : %s = %s."%(str(addr[0]), str(dar)))
+                #dar = float(len(reply))
+                #dar = float(dar/1024)
+                #dar = "%.3s"%(str(dar))
+                #dar = "%s KB"%(dar)
+                #print(":::Request done : %s = %s."%(str(addr[0]), str(dar)))
             else:
                 break
 
-        print(":::proxy_server - end")
+        #print(":::proxy_server - end")
         s.close()
         conn.close()
     except Exception as e:
@@ -168,45 +199,56 @@ def proxy_server(webserver, port, conn, data, addr):
         sys.exit(1)
         
 def proxy_server_HTTPS(webserver, port, conn, data, addr):
+    addresses_flag = False
     print(":::proxy_server_HTTPS")
     try:
         context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         context.verify_mode = ssl.CERT_NONE
         context.check_hostname = False
-        print("check point 1", "addr : ", addr, ":", webserver, ":", port)
+        #print("check point 1", "addr : ", addr, ":", webserver, ":", port)
 
         web2addr = ""
         looks = subprocess.check_output(["nslookup", webserver])
-        print("dns\n", looks.decode('utf-8'))
-        looks = looks.decode('utf-8').split("\n")
-        #print("looks 2", looks)
+        #print("dns\n", looks.decode('euc-kr'))
+        looks = looks.decode('euc-kr').split("\n")
+        
         for look in looks:
             match = re.match("^address:[ ]+([^ ]+).*$", look.strip(), re.I)
             if(match):
                 web2addr = match.group(1)
 
-        print("check point 2", "webserver : ", webserver)
-        print("IP : ", web2addr, " type : ", type(web2addr))
+        for look in looks:
+            if(addresses_flag):
+                match = re.match(".*$", look.strip(), re.I)
+                if(match):
+                    web2addr = match.group(0)
+                    break
+            match = re.match("^addresses:[ ]+([^ ]+).*$", look.strip(), re.I)
+            if(match):
+                addresses_flag = True
+
+        #print("check point 2", "webserver : ", webserver)
+        #print("IP : ", web2addr, " type : ", type(web2addr))
 
         s = context.wrap_socket(socket.socket(socket.AF_INET))#, server_hostname=(webserver, port))
         s.settimeout(timeout)
         s.connect((web2addr, port))
 
         s.send(data)
-        print("check point 3")
-        print("msg\n", data.decode('utf-8'))
+        #print("check point 3")
+        print("msg\n", data.decode('utf-8'), "\n")
 
         resp = ""
         while 1:
             reply = s.recv(buffer_size)
-            print("reply : ", reply)
+            print("reply : ", reply, "\n")
             if(len(reply) > 0):
                 conn.send(reply)
-                dar = float(len(reply))
-                dar = float(dar/1024)
-                dar = "%.3s"%(str(dar))
-                dar = "%s KB"%(dar)
-                print(":::Request done : %s = %s."%(str(addr[0]), str(dar)))
+                #dar = float(len(reply))
+                #dar = float(dar/1024)
+                #dar = "%.3s"%(str(dar))
+                #dar = "%s KB"%(dar)
+                #print(":::Request done : %s = %s."%(str(addr[0]), str(dar)))
             else:
                 break
         print(":::proxy_server_HTTPS end")
