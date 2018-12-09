@@ -29,9 +29,6 @@ def start():
 
     try:
         sa = socket.getaddrinfo("127.0.0.1", listening_port, socket.AF_INET, socket.SOCK_STREAM)[0]
-        print(sa)
-        print("sa[4] type", type(sa[4]), sa[4])
-        print("sa[4][0] type", type(sa[4][0]), sa[4][0])
         s.bind(sa[4])
         print(":::start - bind socket.")
     except Exception as e:
@@ -78,7 +75,7 @@ def start():
                     conn.close()
                 print(e)
                 continue
-        except Exception as e:
+        except KeyboardInterrupt as e:
             if s:
                 s.close()
             print(":::start - terminate proxy server.")
@@ -211,7 +208,7 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
             if(match):
                 addresses_flag = True
 
-        s = context.wrap_socket(socket.socket(socket.AF_INET))
+        s = context.wrap_socket(socket.socket(socket.AF_INET))#, server_hostname=(webserver, port))
         s.settimeout(timeout)
         s.connect((web2addr, port))
 
@@ -226,7 +223,7 @@ def proxy_server_HTTPS(webserver, port, conn, data, addr):
                 conn.send(reply)
             else:
                 break
-
+        print(":::proxy_server_HTTPS end")
         s.close()
         conn.close()
     except Exception as e:
@@ -247,6 +244,5 @@ except KeyboardInterrupt:
     sys.exit()
 
 start()
-
 
 
